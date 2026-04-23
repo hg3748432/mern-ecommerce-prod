@@ -1,3 +1,5 @@
+import morgan from 'morgan';
+import helmet from 'helmet';
 import express from 'express';
 import path from 'path';
 import cookieParser from 'cookie-parser';
@@ -20,12 +22,19 @@ const port = process.env.PORT || 5000;
 connectDB();
 
 const app = express();
-
+app.use(helmet());
 app.use(cors());
 app.use(compression());
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    service: 'mern-ecommerce-api',
+    time: new Date().toISOString()
+  });
+});
 
 const __dirname = path.resolve(); // Set {__dirname} to current working directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
