@@ -17,7 +17,17 @@ import connectDB from './config/db.js';
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
 
 const port = process.env.PORT || 5000;
+const client = require('prom-client');
 
+// collect default metrics (CPU, memory etc)
+client.collectDefaultMetrics();
+
+// custom metrics
+const httpRequestDuration = new client.Histogram({
+  name: 'http_request_duration_seconds',
+  help: 'Duration of HTTP requests in seconds',
+  labelNames: ['method', 'route', 'status'],
+});
 // Connect to MongoDB
 connectDB();
 
@@ -28,6 +38,23 @@ app.use(compression());
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use((req, res, next) => {
+  const start = Date.now();
+
+  res.on('finish', () => {
+    const duration = (Date.now() - start) / 1000;
+
+    httpRequestDuration
+      .labels(req.method, req.route?.path || req.path, res.statusCode)
+      .observe(duration);
+  });
+
+  next();
+});
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', client.register.contentType);
+  res.end(await client.register.metrics());
+});
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
