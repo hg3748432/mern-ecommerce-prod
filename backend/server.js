@@ -32,6 +32,10 @@ const httpRequestDuration = new client.Histogram({
 connectDB();
 
 const app = express();
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', client.register.contentType);
+  res.send(await client.register.metrics());
+});
 app.use(helmet());
 app.use(cors());
 app.use(compression());
@@ -51,10 +55,7 @@ app.use((req, res, next) => {
 
   next();
 });
-app.get('/metrics', async (req, res) => {
-  res.set('Content-Type', client.register.contentType);
-  res.end(await client.register.metrics());
-});
+
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
